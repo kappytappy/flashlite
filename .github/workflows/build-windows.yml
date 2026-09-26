@@ -1,0 +1,55 @@
+name: Build Windows exe
+
+# Builds a double-clickable FlashLite.exe (no console window) and
+# publishes it on the Releases page.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app.py"
+      - "flashcards.py"
+      - "requirements.txt"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Stamp version from release tag
+        shell: bash
+        run: echo "VERSION = 'v1.0.${{ github.run_number }}'" > version.py
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build standalone exe
+        run: |
+          pyinstaller --onefile --noconfirm --windowed --name FlashLite app.py
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: FlashLite v1.0.${{ github.run_number }}
+          body: |
+            Download `FlashLite.exe` below and double-click to run. No install, no account.
+
+            Your decks are saved in `flashlite_data.json` next to the exe — copy both
+            files anywhere and your cards come with you.
+
+            To make cards from a text file: **Import .txt…** — one card per line,
+            like `Capital of France? | Paris` (separator is your choice: tab, `|`,
+            `;`, `,`, or custom).
+          files: dist/FlashLite.exe
