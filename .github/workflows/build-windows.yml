@@ -43,6 +43,7 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: FlashLite v1.0.${{ github.run_number }}
+          generate_release_notes: true
           body: |
             Download `FlashLite.exe` below and double-click to run. No install, no account.
 
