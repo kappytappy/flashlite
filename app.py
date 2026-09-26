@@ -317,146 +317,6 @@ class ExportDialog(tk.Toplevel):
         self.destroy()
 
 
-class QuizImportDialog(tk.Toplevel):
-    """Import a quiz from a .txt file in Q:/A)/Answer: format."""
-
-    def __init__(self, parent, t, quiz_names):
-        super().__init__(parent)
-        self.title("Import quiz from .txt")
-        self.resizable(False, False)
-        self.configure(bg=t["bg"])
-        self.t = t
-        self.result = None
-        self._questions = []
-
-        self.file_var = tk.StringVar()
-        self.target_var = tk.StringVar(value="new")
-        self.newname_var = tk.StringVar()
-        self.status_var = tk.StringVar(value="Pick a quiz .txt file to begin.")
-
-        frm = tk.Frame(self, bg=t["bg"])
-        frm.pack(padx=14, pady=14)
-
-        def lab(text):
-            return tk.Label(frm, text=text, font=(FONT, 11), bg=t["bg"], fg=t["fg"])
-
-        lab("File:").grid(row=0, column=0, sticky="w")
-        tk.Entry(frm, textvariable=self.file_var, width=40, font=(FONT, 11),
-                 bg=t["card"], fg=t["fg"], insertbackground=t["fg"],
-                 relief="solid", bd=1).grid(row=0, column=1, padx=5)
-        tk.Button(frm, text="Browse…", font=(FONT, 11), command=self._browse,
-                  bg=t["bg"], fg=t["fg"], activebackground=t["card"],
-                  activeforeground=t["fg"], relief="solid", bd=1,
-                  padx=10).grid(row=0, column=2)
-
-        lab("Add to:").grid(row=1, column=0, sticky="w", pady=(10, 0))
-        tgtfrm = tk.Frame(frm, bg=t["bg"])
-        tgtfrm.grid(row=1, column=1, columnspan=2, sticky="w", pady=(10, 0))
-        tk.Radiobutton(tgtfrm, text="New quiz:", value="new", variable=self.target_var,
-                       font=(FONT, 10), bg=t["bg"], fg=t["fg"],
-                       selectcolor=t["card"], activebackground=t["bg"]).pack(side="left")
-        tk.Entry(tgtfrm, textvariable=self.newname_var, width=16, font=(FONT, 10),
-                 bg=t["card"], fg=t["fg"], insertbackground=t["fg"],
-                 relief="solid", bd=1).pack(side="left", padx=5)
-        tk.Radiobutton(tgtfrm, text="Existing:", value="existing",
-                       variable=self.target_var, font=(FONT, 10), bg=t["bg"],
-                       fg=t["fg"], selectcolor=t["card"],
-                       activebackground=t["bg"]).pack(side="left", padx=(6, 0))
-        self.existing_list = tk.Listbox(tgtfrm, height=1, width=16, font=(FONT, 10),
-                                        bg=t["card"], fg=t["fg"], relief="solid", bd=1,
-                                        exportselection=False)
-        for name in quiz_names:
-            self.existing_list.insert("end", name)
-        self.existing_list.pack(side="left", padx=5)
-        if quiz_names:
-            self.existing_list.selection_set(0)
-
-        lab("Preview:").grid(row=2, column=0, sticky="nw", pady=(10, 0))
-        self.preview = tk.Listbox(frm, width=58, height=8, font=(FONT, 10),
-                                  bg=t["card"], fg=t["fg"], relief="solid", bd=1)
-        self.preview.grid(row=2, column=1, columnspan=2, pady=(10, 0))
-        tk.Label(frm, textvariable=self.status_var, font=(FONT, 10),
-                 bg=t["bg"], fg=t["muted"]).grid(row=3, column=1, columnspan=2,
-                                                 sticky="w", pady=(4, 0))
-        tk.Label(frm, text="Format:  Q: question / A) B) C) D) options / Answer: B",
-                 font=(FONT, 9), bg=t["bg"], fg=t["muted"]).grid(
-                     row=4, column=1, columnspan=2, sticky="w")
-
-        btnfrm = tk.Frame(frm, bg=t["bg"])
-        btnfrm.grid(row=5, column=1, columnspan=2, sticky="e", pady=(12, 0))
-        tk.Button(btnfrm, text="Import", font=(FONT, 11), command=self._do_import,
-                  bg=t["bg"], fg=t["fg"], activebackground=t["card"],
-                  activeforeground=t["fg"], relief="solid", bd=1,
-                  padx=10).pack(side="left", padx=5)
-        tk.Button(btnfrm, text="Cancel", font=(FONT, 11), command=self.destroy,
-                  bg=t["bg"], fg=t["fg"], activebackground=t["card"],
-                  activeforeground=t["fg"], relief="solid", bd=1,
-                  padx=10).pack(side="left")
-
-        self.transient(parent)
-        self.grab_set()
-
-    def _browse(self):
-        path = filedialog.askopenfilename(
-            title="Pick a quiz .txt file",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
-        if path:
-            self.file_var.set(path)
-            import os
-            base = os.path.splitext(os.path.basename(path))[0]
-            if not self.newname_var.get():
-                self.newname_var.set(base)
-            self._reparse()
-
-    def _reparse(self):
-        path = self.file_var.get().strip()
-        self._questions = []
-        self.preview.delete(0, "end")
-        if not path:
-            self.status_var.set("Pick a quiz .txt file to begin.")
-            return
-        try:
-            with open(path, "r", encoding="utf-8-sig") as f:
-                text = f.read()
-        except Exception as exc:
-            self.status_var.set(f"Could not read file: {exc}")
-            return
-        questions, skipped = fc.parse_quiz(text)
-        self._questions = questions
-        for qs in questions[:12]:
-            letter = chr(65 + qs["answer"])
-            self.preview.insert("end",
-                                f"Q: {qs['q'][:42]}  ->  {letter}) {qs['options'][qs['answer']][:24]}")
-        if len(questions) > 12:
-            self.preview.insert("end", f"... and {len(questions) - 12} more")
-        msg = f"{len(questions)} question(s) ready"
-        if skipped:
-            msg += f", {skipped} line(s)/block(s) skipped"
-        self.status_var.set(msg)
-
-    def _do_import(self):
-        if not self._questions:
-            messagebox.showwarning("Nothing to import",
-                                   "No valid questions found. Check the file format.",
-                                   parent=self)
-            return
-        if self.target_var.get() == "new":
-            name = self.newname_var.get().strip()
-            if not name:
-                messagebox.showwarning("Name needed", "Give the new quiz a name.",
-                                       parent=self)
-                return
-            target = ("new", name)
-        else:
-            sel = self.existing_list.curselection()
-            if not sel:
-                messagebox.showwarning("No quiz", "Pick an existing quiz.", parent=self)
-                return
-            target = ("existing", sel[0])
-        self.result = (target, self._questions)
-        self.destroy()
-
-
 # --------------------------------------------------------------------------- #
 # Main app
 # --------------------------------------------------------------------------- #
@@ -482,7 +342,6 @@ class FlashLite(tk.Tk):
         self.settings = self.data["settings"]
         self.t = THEMES[self.settings["theme"]]
         self.deck_idx = None
-        self.quiz_idx = None
         self.screen = "home"
 
         self._build_ui()
@@ -500,8 +359,6 @@ class FlashLite(tk.Tk):
         for name, builder in (("home", self._build_home),
                               ("deck", self._build_deck),
                               ("study", self._build_study),
-                              ("quiz", self._build_quiz),
-                              ("quiztake", self._build_quiztake),
                               ("settings", self._build_settings)):
             frame = tk.Frame(self, bg=self.t["bg"])
             builder(frame)
@@ -556,66 +413,43 @@ class FlashLite(tk.Tk):
         return bar
 
     # ======================================================================= #
-    # HOME — deck + quiz lists
+    # HOME — deck list
     # ======================================================================= #
     def _build_home(self, root):
         self.topbar(root, left_text="⚙", left_cmd=lambda: self.show("settings"),
                     right_text="+", right_cmd=self._new_deck)
         self.L(root, "FlashLite", size=24, bold=True).pack(pady=(6, 2))
-        self.L(root, "pick a deck or a quiz", size=11,
-               fg=self.t["muted"]).pack(pady=(0, 10))
+        self.L(root, "pick a deck to study", size=11, fg=self.t["muted"]).pack(pady=(0, 10))
 
-        body = tk.Frame(root, bg=self.t["bg"])
-        body.pack(fill="both", expand=True, padx=40)
-
-        self.L(body, "Decks", size=14, bold=True).pack(anchor="w", pady=(4, 4))
-        self.home_decks = tk.Frame(body, bg=self.t["bg"])
-        self.home_decks.pack(fill="x")
-
-        self.L(body, "Quizzes", size=14, bold=True).pack(anchor="w", pady=(12, 4))
-        self.home_quizzes = tk.Frame(body, bg=self.t["bg"])
-        self.home_quizzes.pack(fill="x")
+        self.home_decks = tk.Frame(root, bg=self.t["bg"])
+        self.home_decks.pack(fill="both", expand=True, padx=40)
 
         bottom = tk.Frame(root, bg=self.t["bg"])
         bottom.pack(pady=14)
-        self.B(bottom, "Import cards .txt …", self._import_txt).pack(side="left", padx=6)
-        self.B(bottom, "Import quiz .txt …", self._import_quiz).pack(side="left", padx=6)
+        self.B(bottom, "Import .txt …", self._import_txt).pack(side="left", padx=6)
         self.L(root, f"v{VERSION}", size=9, fg=self.t["muted"]).pack(pady=(0, 8))
-
-    def _home_row(self, parent, text, cmd):
-        tk.Button(parent, text=text, font=(FONT, 14), bg=self.t["card"],
-                  fg=self.t["fg"], activebackground=self.t["accent"],
-                  activeforeground=self.t["bg"], relief="solid", bd=1,
-                  padx=12, pady=8, anchor="w", command=cmd).pack(fill="x", pady=3)
 
     def _refresh_home(self):
         for child in self.home_decks.winfo_children():
             child.destroy()
-        for child in self.home_quizzes.winfo_children():
-            child.destroy()
-        if not self.data["decks"]:
+        decks = self.data["decks"]
+        if not decks:
             self.L(self.home_decks, "no decks yet — make one with +",
-                   size=12, fg=self.t["muted"]).pack(anchor="w", pady=4)
-        for i, deck in enumerate(self.data["decks"]):
-            self._home_row(self.home_decks,
-                           f"{deck['name']}   ({len(deck['cards'])})",
-                           lambda i=i: self._open_deck(i))
-        if not self.data["quizzes"]:
-            self.L(self.home_quizzes, "no quizzes yet — import a quiz .txt file",
-                   size=12, fg=self.t["muted"]).pack(anchor="w", pady=4)
-        for i, quiz in enumerate(self.data["quizzes"]):
-            n = len(quiz["questions"])
-            self._home_row(self.home_quizzes,
-                           f"{quiz['name']}   ({n} question{'s' if n != 1 else ''})",
-                           lambda i=i: self._open_quiz(i))
+                   size=12, fg=self.t["muted"]).pack(pady=30)
+            return
+        for i, deck in enumerate(decks):
+            row = tk.Frame(self.home_decks, bg=self.t["bg"])
+            row.pack(fill="x", pady=3)
+            b = tk.Button(row, text=f"{deck['name']}   ({len(deck['cards'])})",
+                          font=(FONT, 14), bg=self.t["card"], fg=self.t["fg"],
+                          activebackground=self.t["accent"], activeforeground=self.t["bg"],
+                          relief="solid", bd=1, padx=12, pady=8, anchor="w",
+                          command=lambda i=i: self._open_deck(i))
+            b.pack(fill="x")
 
     def _open_deck(self, i):
         self.deck_idx = i
         self.show("deck")
-
-    def _open_quiz(self, i):
-        self.quiz_idx = i
-        self.show("quiz")
 
     # ======================================================================= #
     # DECK — cards in one deck
@@ -913,143 +747,6 @@ class FlashLite(tk.Tk):
               else self._q(self.card, self.direction))
 
     # ======================================================================= #
-    # QUIZ — question list for one quiz
-    # ======================================================================= #
-    def _build_quiz(self, root):
-        self.topbar(root, left_text="‹", left_cmd=lambda: self.show("home"),
-                    right_text="⚙", right_cmd=lambda: self.show("settings"))
-        self.quiz_title = self.L(root, "", size=22, bold=True)
-        self.quiz_title.pack(pady=(2, 2))
-        self.quiz_sub = self.L(root, "", size=11, fg=self.t["muted"])
-        self.quiz_sub.pack(pady=(0, 8))
-
-        self.question_list = tk.Listbox(root, font=(FONT, 12), bg=self.t["card"],
-                                        fg=self.t["fg"],
-                                        selectbackground=self.t["accent"],
-                                        selectforeground=self.t["bg"],
-                                        relief="solid", bd=1, exportselection=False)
-        self.question_list.pack(fill="both", expand=True, padx=40, pady=4)
-
-        ops = tk.Frame(root, bg=self.t["bg"])
-        ops.pack(pady=(8, 14))
-        self.B(ops, "Start quiz", self._start_quiz).pack(side="left", padx=4)
-        self.B(ops, "Import quiz .txt …", self._import_quiz).pack(side="left", padx=4)
-        self.B(ops, "Export quiz .txt …", self._export_quiz).pack(side="left", padx=4)
-        self.B(ops, "Rename", self._rename_quiz).pack(side="left", padx=4)
-        self.B(ops, "Delete", self._delete_quiz).pack(side="left", padx=4)
-
-    def _refresh_quiz(self):
-        quiz = self.data["quizzes"][self.quiz_idx]
-        self.quiz_title.config(text=quiz["name"])
-        n = len(quiz["questions"])
-        self.quiz_sub.config(text=f"{n} question{'s' if n != 1 else ''}")
-        self.question_list.delete(0, "end")
-        for qs in quiz["questions"]:
-            q = qs["q"].replace("\n", " ")
-            if len(q) > 48:
-                q = q[:48] + "…"
-            ans = qs["options"][qs["answer"]].replace("\n", " ")
-            if len(ans) > 24:
-                ans = ans[:24] + "…"
-            self.question_list.insert("end", f"{q}  →  {ans}")
-
-    # ======================================================================= #
-    # QUIZ TAKE — answer the questions
-    # ======================================================================= #
-    def _build_quiztake(self, root):
-        self.topbar(root, left_text="‹", left_cmd=self._quit_quiz)
-        self.qt_title = self.L(root, "", size=22, bold=True)
-        self.qt_title.pack(pady=(2, 4))
-        self.qt_progress = self.L(root, "", size=12, fg=self.t["muted"])
-        self.qt_progress.pack(pady=(0, 8))
-
-        mid = tk.Frame(root, bg=self.t["bg"])
-        mid.pack(fill="both", expand=True, padx=40)
-
-        self.qt_question = tk.Label(mid, text="", font=(FONT, 18), wraplength=560,
-                                    bg=self.t["bg"], fg=self.t["fg"], justify="center")
-        self.qt_question.pack(pady=(10, 14))
-        self.qt_opts = tk.Frame(mid, bg=self.t["bg"])
-        self.qt_opts.pack(fill="x")
-        self.qt_buttons = []
-        for i in range(6):
-            b = tk.Button(self.qt_opts, text="", font=(FONT, 13), wraplength=480,
-                          bg=self.t["card"], fg=self.t["fg"],
-                          activebackground=self.t["accent"], relief="solid", bd=1,
-                          padx=10, pady=6, anchor="w",
-                          command=lambda i=i: self._quiz_pick(i))
-            b.pack(fill="x", pady=3)
-            self.qt_buttons.append(b)
-        self.qt_feedback = self.L(mid, "", size=13, bold=True)
-        self.qt_feedback.pack(pady=8)
-        self.qt_score = self.L(root, "", size=12, fg=self.t["muted"])
-        self.qt_score.pack(pady=(0, 14))
-
-    def _quiz(self):
-        return self.data["quizzes"][self.quiz_idx]
-
-    def _start_quiz(self):
-        quiz = self._quiz()
-        if not quiz["questions"]:
-            return
-        self.qt_title.config(text=quiz["name"])
-        self.qt_order = quiz["questions"][:]
-        random.shuffle(self.qt_order)
-        self.qt_pos = 0
-        self.qt_right = 0
-        self._quiz_next()
-        self.show("quiztake")
-
-    def _quit_quiz(self):
-        self.show("quiz")
-
-    def _quiz_next(self):
-        if self.qt_pos >= len(self.qt_order):
-            total = len(self.qt_order)
-            pct = round(100 * self.qt_right / total) if total else 0
-            messagebox.showinfo("Quiz done!",
-                                f"“{self._quiz()['name']}”\n"
-                                f"Score: {self.qt_right}/{total} ({pct}%)",
-                                parent=self)
-            self._quit_quiz()
-            return
-        qs = self.qt_order[self.qt_pos]
-        order = list(range(len(qs["options"])))
-        random.shuffle(order)
-        self.qt_options = [qs["options"][i] for i in order]
-        self.qt_correct = order.index(qs["answer"])
-        self.qt_answered = False
-        self.qt_question.config(text=qs["q"])
-        self.qt_progress.config(
-            text=f"Question {self.qt_pos + 1} of {len(self.qt_order)}")
-        self.qt_feedback.config(text="")
-        self.qt_score.config(text=f"Score: {self.qt_right}/{self.qt_pos}")
-        for n, btn in enumerate(self.qt_buttons):
-            if n < len(self.qt_options):
-                btn.config(text=f"{chr(65 + n)})  {self.qt_options[n]}",
-                           bg=self.t["card"], fg=self.t["fg"], state="normal")
-                btn.pack(fill="x", pady=3)
-            else:
-                btn.pack_forget()
-
-    def _quiz_pick(self, i):
-        if getattr(self, "qt_answered", False) or i >= len(self.qt_options):
-            return
-        self.qt_answered = True
-        for b in self.qt_buttons:
-            b.config(state="disabled")
-        if i == self.qt_correct:
-            self.qt_right += 1
-            self.qt_buttons[i].config(bg="#b2cc3e", fg="#000000")
-            self.qt_feedback.config(text="✔ correct", fg="#7bf950")
-        else:
-            self.qt_buttons[i].config(bg="#ea4848", fg="#ffffff")
-            self.qt_buttons[self.qt_correct].config(bg="#b2cc3e", fg="#000000")
-            self.qt_feedback.config(text="✘ wrong", fg="#ea4848")
-        self.qt_pos += 1
-        self.after(900, self._quiz_next)
-
-    # ======================================================================= #
     # SETTINGS — themes + study options
     # ======================================================================= #
     def _build_settings(self, root):
@@ -1223,61 +920,6 @@ class FlashLite(tk.Tk):
 
     def _export_txt(self):
         ExportDialog(self, self.t, self._deck())
-
-    # -- quiz ops ------------------------------------------------------------- #
-    def _import_quiz(self):
-        dlg = QuizImportDialog(self, self.t,
-                               [q["name"] for q in self.data["quizzes"]])
-        self.wait_window(dlg)
-        if not dlg.result:
-            return
-        target, questions = dlg.result
-        if target[0] == "new":
-            self.data["quizzes"].append({"name": target[1], "questions": questions})
-            new_idx = len(self.data["quizzes"]) - 1
-        else:
-            new_idx = target[1]
-            self.data["quizzes"][new_idx]["questions"].extend(questions)
-        self._save()
-        self._open_quiz(new_idx)
-        messagebox.showinfo("Imported",
-                            f"Added {len(questions)} questions.", parent=self)
-
-    def _export_quiz(self):
-        quiz = self._quiz()
-        path = filedialog.asksaveasfilename(
-            title="Save quiz as .txt", defaultextension=".txt",
-            filetypes=[("Text files", "*.txt")], parent=self)
-        if not path:
-            return
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(fc.quiz_to_txt(quiz))
-        except Exception as exc:
-            messagebox.showerror("Export failed", str(exc), parent=self)
-            return
-        messagebox.showinfo("Exported",
-                            f"Saved {len(quiz['questions'])} questions.", parent=self)
-
-    def _rename_quiz(self):
-        quiz = self._quiz()
-        name = simpledialog.askstring("Rename quiz", "New name:",
-                                      initialvalue=quiz["name"], parent=self)
-        if name and name.strip():
-            quiz["name"] = name.strip()
-            self._save()
-            self._refresh_quiz()
-
-    def _delete_quiz(self):
-        quiz = self._quiz()
-        if messagebox.askyesno("Delete quiz",
-                               f"Delete “{quiz['name']}” and its "
-                               f"{len(quiz['questions'])} questions?",
-                               parent=self):
-            del self.data["quizzes"][self.quiz_idx]
-            self._save()
-            self.quiz_idx = None
-            self.show("home")
 
 
 def main():
