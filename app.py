@@ -779,6 +779,30 @@ class FlashLite(tk.Tk):
         canvas.pack(side="left", fill="both", expand=True, padx=(20, 0), pady=4)
         scroll.pack(side="right", fill="y")
 
+        # Mouse-wheel scrolling (tkinter doesn't bind this by itself).
+        def _wheel(event):
+            if event.num == 4:
+                canvas.yview_scroll(-3, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(3, "units")
+            else:
+                # Windows: delta = ±120 per notch; macOS sends smaller values
+                steps = int(event.delta / 120) or (-1 if event.delta < 0 else 1)
+                canvas.yview_scroll(-steps * 3, "units")
+
+        def _bind_wheel(event):
+            canvas.bind_all("<MouseWheel>", _wheel)   # Windows / macOS
+            canvas.bind_all("<Button-4>", _wheel)     # Linux scroll up
+            canvas.bind_all("<Button-5>", _wheel)     # Linux scroll down
+
+        def _unbind_wheel(event):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        canvas.bind("<Enter>", _bind_wheel)
+        canvas.bind("<Leave>", _unbind_wheel)
+
         def heading(text):
             f = tk.Frame(inner, bg=self.t["bg"])
             f.pack(fill="x", pady=(12, 6), padx=10)
