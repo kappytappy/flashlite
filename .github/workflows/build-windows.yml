@@ -38,6 +38,22 @@ jobs:
         run: |
           pyinstaller --onefile --noconfirm --windowed --name FlashLite app.py
 
+      - name: Build changelog from commits
+        id: changelog
+        shell: bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -n "$PREV_TAG" ]; then
+            NOTES=$(git log --pretty=format:'- %s' "$PREV_TAG"..HEAD)
+          else
+            NOTES=$(git log --pretty=format:'- %s')
+          fi
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -53,4 +69,7 @@ jobs:
             To make cards from a text file: **Import .txt…** — one card per line,
             like `Capital of France? | Paris` (separator is your choice: tab, `|`,
             `;`, `,`, or custom).
+
+            ## What's changed
+            ${{ steps.changelog.outputs.notes }}
           files: dist/FlashLite.exe
