@@ -22,7 +22,11 @@ fully portable — copy the exe + json anywhere.
 - **Import .txt** — one card per line, `front | back` (separator is your choice:
   tab, `|`, `;`, `,`, or anything custom). Preview before importing, into a new
   deck or an existing one
-- **Export .txt** — back up any deck to a text file
+- **Quizzes** — import multiple-choice quizzes from .txt, take them with
+  shuffled questions and options, scored with a percentage at the end.
+  Format: `Q:` question, `A)` `B)` `C)` `D)` options, `Answer: B`.
+  See [quiz-format-guide.txt](quiz-format-guide.txt) for the full spec
+- **Export .txt** — back up any deck or quiz to a text file
 
 ### .txt format example
 

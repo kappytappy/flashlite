@@ -1,0 +1,104 @@
+================================================================
+ FlashLite — How to format .txt files for QUIZZES
+================================================================
+
+A quiz file is a plain text file (.txt) with multiple-choice questions.
+FlashLite reads it with "Import quiz .txt …" on the home screen.
+
+----------------------------------------------------------------
+THE FORMAT
+----------------------------------------------------------------
+
+  Q: <question>
+  A) <option>
+  B) <option>
+  C) <option>
+  D) <option>
+  Answer: <letter>
+
+- "Q:" starts a new question. Write the question on the same line.
+- Each option goes on its own line, starting with a letter and ")":
+  A) B) C) D) — you can use 2 to 6 options (up to F).
+- "Answer:" gives the letter of the correct option.
+- Put a BLANK line between questions (or just start the next "Q:").
+
+----------------------------------------------------------------
+FULL EXAMPLE (copy-paste ready)
+----------------------------------------------------------------
+
+Q: What is the capital of France?
+A) London
+B) Paris
+C) Rome
+D) Madrid
+Answer: B
+
+Q: Which mode moves freight in sealed 20/40 ft steel boxes
+   across ship, train, and truck without unpacking?
+A) Break-bulk
+B) Containerization
+C) Hub-and-spoke
+D) Cross-docking
+Answer: B
+
+Q: Little's Law states:
+A) I = R + T
+B) I = R x T
+C) R = I x T
+Answer: B
+
+----------------------------------------------------------------
+RULES
+----------------------------------------------------------------
+
+1. One question per block. A block = Q: line + option lines + Answer: line.
+2. Options must be labeled in order starting at A (A, B, C…).
+3. The Answer: letter must match one of the options you listed.
+4. Keep each line on ONE line — no line breaks inside a question
+   or an option.
+5. Blank lines and anything that isn't Q:/A)/Answer: is ignored, so
+   titles and notes won't break the import — but keep the file clean
+   anyway.
+6. Blocks with fewer than 2 options, no question text, or no valid
+   Answer: are SKIPPED. The preview shows you how many were skipped
+   before you import, so check it.
+
+----------------------------------------------------------------
+COMMON MISTAKES
+----------------------------------------------------------------
+
+  BAD:  Answer: Paris            (use the LETTER, not the text)
+  BAD:  Q:What is…              (put a space after "Q:")
+  BAD:  a) London               (lowercase works, but keep it clean: A))
+  BAD:  Answer: E               (with only A–D options listed)
+  BAD:  Two questions with no blank line or new Q: between them
+        (they'll merge into one broken block)
+
+----------------------------------------------------------------
+GENERATE QUIZZES WITH AI
+----------------------------------------------------------------
+
+Paste this prompt to generate a file in exactly this format:
+
+  Generate a multiple-choice quiz .txt file for FlashLite.
+
+  STRICT FORMAT:
+  - Repeat this block per question:
+      Q: <question>
+      A) <option>
+      B) <option>
+      C) <option>
+      D) <option>
+      Answer: <letter>
+  - 4 options per question (A–D), exactly one correct.
+  - "Answer:" uses the LETTER only.
+  - One blank line between questions.
+  - No titles, no headers, no numbering, no markdown, no extra text.
+  - Each question and option on a single line.
+
+  Generate [NUMBER] questions about [TOPIC]:
+
+================================================================
+Flashcards use a different format: one card per line as
+"Term: Definition". See the app's Import .txt dialog for details.
+================================================================

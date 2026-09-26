@@ -4,6 +4,7 @@ Kept GUI-free so it can be unit-tested headlessly. The GUI lives in app.py.
 """
 import json
 import os
+import re
 import sys
 
 APP_NAME = "FlashLite"
@@ -73,6 +74,10 @@ def normalize(data):
         data["settings"]["modes"].setdefault(key, value)
     if data["settings"].get("theme") not in THEME_IDS:
         data["settings"]["theme"] = "light"
+    data.setdefault("quizzes", [])
+    for quiz in data["quizzes"]:
+        quiz.setdefault("name", "Untitled quiz")
+        quiz.setdefault("questions", [])
     return data
 
 
@@ -114,3 +119,80 @@ def deck_to_txt(deck, sep):
         back = card["back"].replace("\n", " ").strip()
         lines.append(f"{front}{sep}{back}")
     return "\n".join(lines) + ("\n" if lines else "")
+
+
+# --------------------------------------------------------------------------- #
+# Quiz format
+#
+#   Q: What is the capital of France?
+#   A) London
+#   B) Paris
+#   C) Rome
+#   Answer: B
+#
+# A block starts with "Q:", has 2-6 option lines ("A)".."F)"), and an
+# "Answer:" line with the correct letter. Blocks end at a blank line or the
+# next "Q:". Anything else is ignored.
+# --------------------------------------------------------------------------- #
+QUIZ_OPTION_RE = re.compile(r"^([A-Fa-f])\)\s*(.+)$")
+QUIZ_ANSWER_RE = re.compile(r"^Answer:\s*([A-Fa-f])\s*$")
+
+
+def parse_quiz(text):
+    """Parse quiz .txt into questions.
+
+    Returns (questions, skipped) where each question is
+    {"q": str, "options": [str, ...], "answer": int-index}.
+    skipped counts invalid question blocks plus stray non-blank lines.
+    """
+    questions = []
+    skipped = 0
+    block = None  # {"q": str, "options": [], "answer": "B"|None}
+
+    def flush():
+        nonlocal block, skipped
+        if block is None:
+            return
+        q, options, answer = block["q"], block["options"], block["answer"]
+        block = None
+        if not q or len(options) < 2 or not answer:
+            skipped += 1
+            return
+        idx = ord(answer.upper()) - ord("A")
+        if idx >= len(options):
+            skipped += 1
+            return
+        questions.append({"q": q, "options": options, "answer": idx})
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            flush()
+            continue
+        if line.startswith("Q:"):
+            flush()
+            block = {"q": line[2:].strip(), "options": [], "answer": None}
+            continue
+        m = QUIZ_OPTION_RE.match(line)
+        if m and block is not None:
+            block["options"].append(m.group(2).strip())
+            continue
+        m = QUIZ_ANSWER_RE.match(line)
+        if m and block is not None:
+            block["answer"] = m.group(1).upper()
+            continue
+        skipped += 1  # stray line outside any valid slot
+    flush()
+    return questions, skipped
+
+
+def quiz_to_txt(quiz):
+    """Serialize a quiz back to the quiz .txt format (for export)."""
+    out = []
+    for qs in quiz["questions"]:
+        out.append(f"Q: {qs['q']}")
+        for i, opt in enumerate(qs["options"]):
+            out.append(f"{chr(65 + i)}) {opt}")
+        out.append(f"Answer: {chr(65 + qs['answer'])}")
+        out.append("")
+    return "\n".join(out)
