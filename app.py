@@ -649,16 +649,21 @@ class FlashLite(tk.Tk):
     def _show_mode_widgets(self):
         is_typed = self.study_mode == "typed"
         is_test = self.study_mode == "test"
+        # Reset everything, then pack in a fixed order per mode. This keeps
+        # the test options directly under the divider instead of leaving a
+        # dead gap from the (empty, unused) answer/feedback labels.
+        for w in (self.type_entry, self.type_check_btn, self.opt_frame,
+                  self.answer_lbl, self.study_feedback):
+            w.pack_forget()
+        if self.study_mode == "flashcard":
+            self.answer_lbl.pack(pady=(10, 4))
         if is_typed:
             self.type_entry.pack(pady=6)
             self.type_check_btn.pack(pady=2)
-        else:
-            self.type_entry.pack_forget()
-            self.type_check_btn.pack_forget()
         if is_test:
             self.opt_frame.pack(fill="x", pady=6)
-        else:
-            self.opt_frame.pack_forget()
+        if not is_test:
+            self.study_feedback.pack(pady=6)
 
     def _study_done(self):
         total = self.right + self.wrong
