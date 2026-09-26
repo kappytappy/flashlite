@@ -16,6 +16,7 @@ fully portable — copy the exe + json anywhere.
 - **Test mode** — multiple choice with 4 options, scored at the end
 - **10 themes** — Light, Dark, Lemon Mint, Lab, Beehive, Houseplant, Cafe,
   Terminal, Dream, Construction (same palette as Flashbang). Pick in ⚙ settings
+- **Text size** — Small / Medium / Large / XL in ⚙ settings, scales all text
 - **Study options** — choose your modes, direction (standard / reversed / both),
   and speech (say prompt, say answer)
 - **🔊 Read aloud** — speech synthesis (Windows)

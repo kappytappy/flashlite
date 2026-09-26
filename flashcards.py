@@ -57,6 +57,7 @@ def save(data):
 
 DEFAULT_SETTINGS = {
     "theme": "light",
+    "font_scale": 1.0,
     "modes": {"flashcard": True, "typed": False, "test": False},
     "direction": "standard",  # standard | reversed | both
     "say_prompt": False,
