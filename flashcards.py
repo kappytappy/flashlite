@@ -44,15 +44,41 @@ def load():
                         for c in deck["cards"]
                         if isinstance(c, dict)
                     ]
-                return data
+                return normalize(data)
         except Exception:
             pass
-    return {"decks": []}
+    return normalize({"decks": []})
 
 
 def save(data):
     with open(data_path(), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+DEFAULT_SETTINGS = {
+    "theme": "light",
+    "modes": {"flashcard": True, "typed": False, "test": False},
+    "direction": "standard",  # standard | reversed | both
+    "say_prompt": False,
+    "say_answer": False,
+}
+
+
+def normalize(data):
+    """Fill in missing settings so old data files keep working."""
+    data.setdefault("settings", {})
+    for key, value in DEFAULT_SETTINGS.items():
+        data["settings"].setdefault(key, value)
+    for key, value in DEFAULT_SETTINGS["modes"].items():
+        data["settings"]["modes"].setdefault(key, value)
+    if data["settings"].get("theme") not in THEME_IDS:
+        data["settings"]["theme"] = "light"
+    return data
+
+
+# Theme ids in picker order (colors mirror Flashbang's own themes).
+THEME_IDS = ["light", "dark", "lemon-mint", "lab", "beehive",
+             "houseplant", "cafe", "terminal", "dream", "construction"]
 
 
 def parse_txt(text, sep):
