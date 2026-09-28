@@ -32,7 +32,11 @@ def fs(n):
 
 
 FONT_SIZE_CHOICES = (("Small", 0.85), ("Medium", 1.0), ("Large", 1.15),
-                     ("XL", 1.3), ("XXL", 1.6), ("Huge", 2.0))
+                     ("XL", 1.3), ("XXL", 1.6), ("Huge", 2.0),
+                     ("Auto (follow window)", "auto"))
+
+# Reference window size that "Auto" scales against (the default geometry).
+_REF_W, _REF_H = 760.0, 620.0
 
 
 def wl(n):
@@ -360,12 +364,18 @@ class FlashLite(tk.Tk):
 
         self.settings = self.data["settings"]
         self.t = THEMES[self.settings["theme"]]
-        _FONT_SCALE["v"] = float(self.settings.get("font_scale", 1.0))
+        fs0 = self.settings.get("font_scale", 1.0)
+        _FONT_SCALE["v"] = 1.0 if fs0 == "auto" else float(fs0)
         self.deck_idx = None
         self.screen = "home"
+        self._auto_after = None  # pending debounced auto-scale callback
 
         self._build_ui()
         self.show("home")
+        # Follow window resizes (only does work when Text size = Auto).
+        self.bind("<Configure>", self._on_window_configure)
+        if fs0 == "auto":
+            self.after(200, self._apply_auto_scale)
 
     # -- theming helpers ---------------------------------------------------- #
     def _build_ui(self):
@@ -905,10 +915,64 @@ class FlashLite(tk.Tk):
         self._restyle()
 
     def _apply_fontsize(self):
-        self.settings["font_scale"] = float(self.fontsize_var.get())
-        _FONT_SCALE["v"] = self.settings["font_scale"]
+        val = self.fontsize_var.get()
+        if val == "auto":
+            self.settings["font_scale"] = "auto"
+        else:
+            self._stop_auto_scale()
+            self.settings["font_scale"] = float(val)
+            _FONT_SCALE["v"] = self.settings["font_scale"]
         self._save()
         self._restyle()
+        if val == "auto":
+            self.after(200, self._apply_auto_scale)
+
+    # -- Auto text size: text follows the window ---------------------------- #
+    def _on_window_configure(self, event):
+        if event.widget is not self:
+            return
+        if self.settings.get("font_scale") != "auto":
+            return
+        # Debounce: rescale once she stops dragging, not 60x a second.
+        self._stop_auto_scale()
+        self._auto_after = self.after(250, self._apply_auto_scale)
+
+    def _stop_auto_scale(self):
+        if self._auto_after:
+            try:
+                self.after_cancel(self._auto_after)
+            except Exception:
+                pass
+            self._auto_after = None
+
+    def _apply_auto_scale(self):
+        self._auto_after = None
+        if self.settings.get("font_scale") != "auto":
+            return
+        w, h = self.winfo_width(), self.winfo_height()
+        if w < 10 or h < 10:
+            return
+        s = min(w / _REF_W, h / _REF_H)
+        s = max(0.85, min(3.0, s))
+        if abs(s - _FONT_SCALE["v"]) < 0.02:
+            return  # no visible change; skip the rebuild
+        _FONT_SCALE["v"] = s
+        # Rebuild at the new size, keeping an in-progress study session alive.
+        studying = self.screen == "study" and getattr(self, "queue", None)
+        was_flipped = bool(studying and self.flipped)
+        typed_text = ""
+        if studying and self.study_mode == "typed":
+            try:
+                typed_text = self.type_entry.get()
+            except Exception:
+                pass
+        self._restyle()
+        if studying:
+            self._study_next()  # re-render the current card at the new size
+            if was_flipped and self.study_mode == "flashcard":
+                self._fc_flip_or_correct()  # re-reveal the answer
+            elif self.study_mode == "typed" and typed_text:
+                self.type_entry.insert(0, typed_text)
 
     def _save_study_opts(self):
         for key, var in self.mode_vars.items():
