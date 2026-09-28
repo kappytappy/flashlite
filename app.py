@@ -31,7 +31,14 @@ def fs(n):
     return max(8, int(round(n * _FONT_SCALE["v"])))
 
 
-FONT_SIZE_CHOICES = (("Small", 0.85), ("Medium", 1.0), ("Large", 1.15), ("XL", 1.3))
+FONT_SIZE_CHOICES = (("Small", 0.85), ("Medium", 1.0), ("Large", 1.15),
+                     ("XL", 1.3), ("XXL", 1.6), ("Huge", 2.0))
+
+
+def wl(n):
+    """Wrap length honoring the user's text-size setting, so big text
+    doesn't wrap into a narrow column."""
+    return max(120, int(round(n * _FONT_SCALE["v"])))
 
 # Theme colors mirror Flashbang's scss variables.
 THEMES = {
@@ -336,8 +343,8 @@ class FlashLite(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"FlashLite {VERSION}")
-        self.geometry("680x560")
-        self.minsize(560, 480)
+        self.geometry("760x620")
+        self.minsize(600, 500)
 
         self.data = fc.load()
         if not self.data["decks"]:
@@ -531,26 +538,29 @@ class FlashLite(tk.Tk):
 
         mid = tk.Frame(root, bg=self.t["bg"])
         mid.pack(fill="both", expand=True, padx=40)
+        # The card block floats in the true middle of the window.
+        center = tk.Frame(mid, bg=self.t["bg"])
+        center.place(relx=0.5, rely=0.5, anchor="center", relwidth=1.0)
 
-        self.prompt_lbl = tk.Label(mid, text="", font=(FONT, fs(18)), wraplength=560,
+        self.prompt_lbl = tk.Label(center, text="", font=(FONT, fs(18)), wraplength=wl(560),
                                    bg=self.t["bg"], fg=self.t["fg"], justify="center")
         self.prompt_lbl.pack(pady=(10, 10))
-        tk.Frame(mid, height=2, bg=self.t["fg"]).pack(fill="x", padx=60, pady=4)
-        self.answer_lbl = tk.Label(mid, text="", font=(FONT, fs(18)), wraplength=560,
+        tk.Frame(center, height=2, bg=self.t["fg"]).pack(fill="x", padx=60, pady=4)
+        self.answer_lbl = tk.Label(center, text="", font=(FONT, fs(18)), wraplength=wl(560),
                                    bg=self.t["bg"], fg=self.t["fg"], justify="center")
         self.answer_lbl.pack(pady=(10, 4))
 
         # typed-mode widgets (hidden unless typed mode)
-        self.type_entry = tk.Entry(mid, font=(FONT, fs(14)), width=34, justify="center",
+        self.type_entry = tk.Entry(center, font=(FONT, fs(14)), width=34, justify="center",
                                    bg=self.t["card"], fg=self.t["fg"],
                                    insertbackground=self.t["fg"], relief="solid", bd=1)
-        self.type_check_btn = self.B(mid, "Check", self._typed_check)
+        self.type_check_btn = self.B(center, "Check", self._typed_check)
 
         # test-mode widgets (hidden unless test mode)
-        self.opt_frame = tk.Frame(mid, bg=self.t["bg"])
+        self.opt_frame = tk.Frame(center, bg=self.t["bg"])
         self.opt_buttons = []
         for i in range(4):
-            b = tk.Button(self.opt_frame, text="", font=(FONT, fs(13)), wraplength=480,
+            b = tk.Button(self.opt_frame, text="", font=(FONT, fs(13)), wraplength=wl(480),
                           bg=self.t["card"], fg=self.t["fg"],
                           activebackground=self.t["accent"], relief="solid", bd=1,
                           padx=10, pady=6, anchor="w",
@@ -558,7 +568,7 @@ class FlashLite(tk.Tk):
             b.pack(fill="x", pady=3)
             self.opt_buttons.append(b)
 
-        self.study_feedback = self.L(mid, "", size=fs(13), bold=True)
+        self.study_feedback = self.L(center, "", size=fs(13), bold=True)
         self.study_feedback.pack(pady=6)
 
         bot = tk.Frame(root, bg=self.t["bg"])
