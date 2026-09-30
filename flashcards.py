@@ -57,7 +57,8 @@ def save(data):
 
 DEFAULT_SETTINGS = {
     "theme": "light",
-    "font_scale": 1.0,
+    "study_font_size": 18.0,  # FlashBang's studyFontSize default
+    "auto_font": False,       # follow the window size (FlashLite extra)
     "modes": {"flashcard": True, "typed": False, "test": False},
     "direction": "standard",  # standard | reversed | both
     "say_prompt": False,
@@ -72,6 +73,17 @@ def normalize(data):
         data["settings"].setdefault(key, value)
     for key, value in DEFAULT_SETTINGS["modes"].items():
         data["settings"]["modes"].setdefault(key, value)
+    # Migrate the old text-size scale to FlashBang's numeric font size.
+    if "font_scale" in data["settings"]:
+        fs0 = data["settings"].pop("font_scale")
+        if fs0 == "auto":
+            data["settings"]["auto_font"] = True
+        else:
+            try:
+                f = float(fs0)
+            except Exception:
+                f = 1.0
+            data["settings"]["study_font_size"] = min(35.0, max(12.0, round(18.0 * f, 1)))
     if data["settings"].get("theme") not in THEME_IDS:
         data["settings"]["theme"] = "light"
     return data

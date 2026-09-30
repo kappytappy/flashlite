@@ -19,30 +19,55 @@ except Exception:
 
 REPO_URL = "https://github.com/kappytappy/flashlite"
 RELEASES_URL = REPO_URL + "/releases"
-FONT = "Courier New"
+FONT = "Courier New"  # the monospace family FlashBang uses for everything
 
-# User-adjustable text scaling. _FONT_SCALE["v"] is set from saved settings at
-# startup; fs(n) converts every hardcoded point size in the app.
-_FONT_SCALE = {"v": 1.0}
+# FlashBang typography, 1-for-1: font-family: monospace on EVERYTHING, sizes in
+# rem off a per-screen root px size (tkinter takes points; 1px = 0.75pt).
+#   study screen root = the "Font size" setting (FlashBang default 18, clamp 12-35)
+#   home screen root  = 16.9px  (FlashBang index.css: html { font-size: 16.9px })
+#   settings & dialogs root = 16px (browser default, like settings/newbunch.css)
+# Corner icon buttons (back / gear / edit / speaker) are 24px SVGs in FlashBang.
+_HOME_PX, _UI_PX, _ICON_PX = 16.9, 16.0, 24.0
+_STUDY_PX = {"v": 18.0}  # effective study root px = setting x auto-window factor
 
 
-def fs(n):
-    """Scaled font size honoring the user's text-size setting."""
-    return max(8, int(round(n * _FONT_SCALE["v"])))
+def _pt(px):
+    """CSS px -> tkinter integer point size (this Tk build needs ints)."""
+    return int(round(px * 0.75))
 
 
-FONT_SIZE_CHOICES = (("Small", 0.85), ("Medium", 1.0), ("Large", 1.15),
-                     ("XL", 1.3), ("XXL", 1.6), ("Huge", 2.0),
-                     ("Auto (follow window)", "auto"))
+def sfs(ratio=1.0):
+    """Study-screen font: ratio x effective study base (FlashBang rem)."""
+    return _pt(_STUDY_PX["v"] * ratio)
 
-# Reference window size that "Auto" scales against (the default geometry).
+
+def hfs(ratio=1.0):
+    """Home-screen font: ratio x 16.9px."""
+    return _pt(_HOME_PX * ratio)
+
+
+def ufs(ratio=1.0):
+    """Settings/dialog font: ratio x 16px."""
+    return _pt(_UI_PX * ratio)
+
+
+def ifs():
+    """Corner icon-button font (FlashBang's 24px SVGs)."""
+    return _pt(_ICON_PX)
+
+
+def _fmt_size(v):
+    return str(int(v)) if float(v) == int(float(v)) else str(v)
+
+
+# Reference window size that "Auto (follow window)" scales against.
 _REF_W, _REF_H = 760.0, 620.0
 
 
 def wl(n):
-    """Wrap length honoring the user's text-size setting, so big text
-    doesn't wrap into a narrow column."""
-    return max(120, int(round(n * _FONT_SCALE["v"])))
+    """Wrap length follows the effective study size (FlashBang base = 18px),
+    so big text doesn't wrap into a narrow column."""
+    return max(120, int(round(n * _STUDY_PX["v"] / 18.0)))
 
 # Theme colors mirror Flashbang's scss variables.
 THEMES = {
@@ -97,17 +122,17 @@ class CardDialog(simpledialog.Dialog):
 
     def body(self, master):
         master.configure(bg=self.t["bg"])
-        tk.Label(master, text="Front:", font=(FONT, fs(11)),
+        tk.Label(master, text="Front:", font=(FONT, ufs(1)),
                  bg=self.t["bg"], fg=self.t["fg"]).grid(row=0, column=0, sticky="w")
         self.front_txt = tk.Text(master, width=46, height=4, wrap="word",
-                                 font=(FONT, fs(12)), bg=self.t["card"], fg=self.t["fg"],
+                                 font=(FONT, ufs(1.2)), bg=self.t["card"], fg=self.t["fg"],
                                  insertbackground=self.t["fg"], relief="solid", bd=1)
         self.front_txt.grid(row=1, column=0, padx=5, pady=(0, 8))
         self.front_txt.insert("1.0", self.front)
-        tk.Label(master, text="Back:", font=(FONT, fs(11)),
+        tk.Label(master, text="Back:", font=(FONT, ufs(1)),
                  bg=self.t["bg"], fg=self.t["fg"]).grid(row=2, column=0, sticky="w")
         self.back_txt = tk.Text(master, width=46, height=4, wrap="word",
-                                font=(FONT, fs(12)), bg=self.t["card"], fg=self.t["fg"],
+                                font=(FONT, ufs(1.2)), bg=self.t["card"], fg=self.t["fg"],
                                 insertbackground=self.t["fg"], relief="solid", bd=1)
         self.back_txt.grid(row=3, column=0, padx=5, pady=(0, 5))
         self.back_txt.insert("1.0", self.back)
@@ -116,7 +141,7 @@ class CardDialog(simpledialog.Dialog):
     def buttonbox(self):
         box = tk.Frame(self, bg=self.t["bg"])
         for text, cmd in (("OK", self.ok), ("Cancel", self.cancel)):
-            tk.Button(box, text=text, font=(FONT, fs(11)), width=10,
+            tk.Button(box, text=text, font=(FONT, ufs(1)), width=10,
                       bg=self.t["bg"], fg=self.t["fg"], activebackground=self.t["card"],
                       activeforeground=self.t["fg"], relief="solid", bd=1,
                       command=cmd).pack(side="left", padx=5, pady=5)
@@ -156,10 +181,10 @@ class ImportDialog(tk.Toplevel):
         frm.pack(padx=14, pady=14)
 
         def lab(text):
-            return tk.Label(frm, text=text, font=(FONT, fs(11)), bg=t["bg"], fg=t["fg"])
+            return tk.Label(frm, text=text, font=(FONT, ufs(1)), bg=t["bg"], fg=t["fg"])
 
         lab("File:").grid(row=0, column=0, sticky="w")
-        tk.Entry(frm, textvariable=self.file_var, width=40, font=(FONT, fs(11)),
+        tk.Entry(frm, textvariable=self.file_var, width=40, font=(FONT, ufs(1)),
                  bg=t["card"], fg=t["fg"], insertbackground=t["fg"],
                  relief="solid", bd=1).grid(row=0, column=1, padx=5)
         self._btn(frm, "Browse…", self._browse).grid(row=0, column=2)
@@ -169,10 +194,10 @@ class ImportDialog(tk.Toplevel):
         sepfrm.grid(row=1, column=1, columnspan=2, sticky="w", pady=(10, 0))
         for label, key in self.SEP_CHOICES:
             tk.Radiobutton(sepfrm, text=label, value=key, variable=self.sep_var,
-                           font=(FONT, fs(10)), bg=t["bg"], fg=t["fg"],
+                           font=(FONT, ufs(1.2)), bg=t["bg"], fg=t["fg"],
                            selectcolor=t["card"], activebackground=t["bg"],
                            command=self._reparse).pack(side="left", padx=(0, 4))
-        tk.Entry(sepfrm, textvariable=self.custom_var, width=4, font=(FONT, fs(10)),
+        tk.Entry(sepfrm, textvariable=self.custom_var, width=4, font=(FONT, ufs(1.1)),
                  bg=t["card"], fg=t["fg"], insertbackground=t["fg"],
                  relief="solid", bd=1).pack(side="left")
         self.custom_var.trace_add("write", lambda *a: self._reparse())
@@ -181,16 +206,16 @@ class ImportDialog(tk.Toplevel):
         tgtfrm = tk.Frame(frm, bg=t["bg"])
         tgtfrm.grid(row=2, column=1, columnspan=2, sticky="w", pady=(10, 0))
         tk.Radiobutton(tgtfrm, text="New deck:", value="new", variable=self.target_var,
-                       font=(FONT, fs(10)), bg=t["bg"], fg=t["fg"],
+                       font=(FONT, ufs(1.2)), bg=t["bg"], fg=t["fg"],
                        selectcolor=t["card"], activebackground=t["bg"]).pack(side="left")
-        tk.Entry(tgtfrm, textvariable=self.newname_var, width=16, font=(FONT, fs(10)),
+        tk.Entry(tgtfrm, textvariable=self.newname_var, width=16, font=(FONT, ufs(1.1)),
                  bg=t["card"], fg=t["fg"], insertbackground=t["fg"],
                  relief="solid", bd=1).pack(side="left", padx=5)
         tk.Radiobutton(tgtfrm, text="Existing:", value="existing",
-                       variable=self.target_var, font=(FONT, fs(10)), bg=t["bg"],
+                       variable=self.target_var, font=(FONT, ufs(1.2)), bg=t["bg"],
                        fg=t["fg"], selectcolor=t["card"],
                        activebackground=t["bg"]).pack(side="left", padx=(6, 0))
-        self.existing_list = tk.Listbox(tgtfrm, height=1, width=16, font=(FONT, fs(10)),
+        self.existing_list = tk.Listbox(tgtfrm, height=1, width=16, font=(FONT, ufs(1.1)),
                                         bg=t["card"], fg=t["fg"], relief="solid", bd=1,
                                         exportselection=False)
         for name in deck_names:
@@ -200,10 +225,10 @@ class ImportDialog(tk.Toplevel):
             self.existing_list.selection_set(0)
 
         lab("Preview:").grid(row=3, column=0, sticky="nw", pady=(10, 0))
-        self.preview = tk.Listbox(frm, width=58, height=8, font=(FONT, fs(10)),
+        self.preview = tk.Listbox(frm, width=58, height=8, font=(FONT, ufs(1.1)),
                                   bg=t["card"], fg=t["fg"], relief="solid", bd=1)
         self.preview.grid(row=3, column=1, columnspan=2, pady=(10, 0))
-        tk.Label(frm, textvariable=self.status_var, font=(FONT, fs(10)),
+        tk.Label(frm, textvariable=self.status_var, font=(FONT, ufs(1)),
                  bg=t["bg"], fg=t["muted"]).grid(row=4, column=1, columnspan=2,
                                                  sticky="w", pady=(4, 0))
 
@@ -217,7 +242,7 @@ class ImportDialog(tk.Toplevel):
 
     def _btn(self, parent, text, cmd):
         t = self.t
-        return tk.Button(parent, text=text, font=(FONT, fs(11)), command=cmd,
+        return tk.Button(parent, text=text, font=(FONT, ufs(1)), command=cmd,
                          bg=t["bg"], fg=t["fg"], activebackground=t["card"],
                          activeforeground=t["fg"], relief="solid", bd=1, padx=10)
 
@@ -300,23 +325,23 @@ class ExportDialog(tk.Toplevel):
 
         frm = tk.Frame(self, bg=t["bg"])
         frm.pack(padx=14, pady=14)
-        tk.Label(frm, text="Separator:", font=(FONT, fs(11)),
+        tk.Label(frm, text="Separator:", font=(FONT, ufs(1)),
                  bg=t["bg"], fg=t["fg"]).grid(row=0, column=0, sticky="w")
         sepfrm = tk.Frame(frm, bg=t["bg"])
         sepfrm.grid(row=0, column=1, sticky="w")
         for label, key in [("Tab", "tab"), ("Pipe  |", "pipe"),
                            ("Semicolon  ;", "semicolon"), ("Comma  ,", "comma")]:
             tk.Radiobutton(sepfrm, text=label, value=key, variable=self.sep_var,
-                           font=(FONT, fs(10)), bg=t["bg"], fg=t["fg"],
+                           font=(FONT, ufs(1.2)), bg=t["bg"], fg=t["fg"],
                            selectcolor=t["card"],
                            activebackground=t["bg"]).pack(side="left", padx=(0, 4))
         btnfrm = tk.Frame(frm, bg=t["bg"])
         btnfrm.grid(row=1, column=0, columnspan=2, sticky="e", pady=(12, 0))
-        tk.Button(btnfrm, text="Save…", font=(FONT, fs(11)), command=self._save,
+        tk.Button(btnfrm, text="Save…", font=(FONT, ufs(1)), command=self._save,
                   bg=t["bg"], fg=t["fg"], activebackground=t["card"],
                   activeforeground=t["fg"], relief="solid", bd=1, padx=10).pack(
                       side="left", padx=5)
-        tk.Button(btnfrm, text="Cancel", font=(FONT, fs(11)), command=self.destroy,
+        tk.Button(btnfrm, text="Cancel", font=(FONT, ufs(1)), command=self.destroy,
                   bg=t["bg"], fg=t["fg"], activebackground=t["card"],
                   activeforeground=t["fg"], relief="solid", bd=1, padx=10).pack(
                       side="left")
@@ -364,8 +389,7 @@ class FlashLite(tk.Tk):
 
         self.settings = self.data["settings"]
         self.t = THEMES[self.settings["theme"]]
-        fs0 = self.settings.get("font_scale", 1.0)
-        _FONT_SCALE["v"] = 1.0 if fs0 == "auto" else float(fs0)
+        _STUDY_PX["v"] = float(self.settings.get("study_font_size", 18.0))
         self.deck_idx = None
         self.screen = "home"
         self._auto_after = None  # pending debounced auto-scale callback
@@ -374,7 +398,7 @@ class FlashLite(tk.Tk):
         self.show("home")
         # Follow window resizes (only does work when Text size = Auto).
         self.bind("<Configure>", self._on_window_configure)
-        if fs0 == "auto":
+        if self.settings.get("auto_font"):
             self.after(200, self._apply_auto_scale)
 
     # -- theming helpers ---------------------------------------------------- #
@@ -415,11 +439,11 @@ class FlashLite(tk.Tk):
         fc.save(self.data)
 
     # -- tiny widget factories ---------------------------------------------- #
-    def L(self, parent, text, size=fs(12), bold=False, fg=None, **kw):
+    def L(self, parent, text, size=ufs(1), bold=False, fg=None, **kw):
         return tk.Label(parent, text=text, font=(FONT, size, "bold" if bold else "normal"),
                         bg=self.t["bg"], fg=fg or self.t["fg"], **kw)
 
-    def B(self, parent, text, cmd, size=fs(11), bold=False, width=None):
+    def B(self, parent, text, cmd, size=ufs(1), bold=False, width=None):
         return tk.Button(parent, text=text, font=(FONT, size, "bold" if bold else "normal"),
                          bg=self.t["bg"], fg=self.t["fg"],
                          activebackground=self.t["card"], activeforeground=self.t["fg"],
@@ -431,13 +455,13 @@ class FlashLite(tk.Tk):
         bar = tk.Frame(parent, bg=self.t["bg"])
         bar.pack(fill="x", padx=10, pady=8)
         if left_text:
-            tk.Button(bar, text=left_text, font=(FONT, fs(16)), command=left_cmd,
+            tk.Button(bar, text=left_text, font=(FONT, ifs()), command=left_cmd,
                       bg=self.t["bg"], fg=self.t["fg"], activebackground=self.t["card"],
                       relief="flat", bd=0, padx=8).pack(side="left")
         else:
             tk.Frame(bar, bg=self.t["bg"], width=40).pack(side="left")
         if right_text:
-            tk.Button(bar, text=right_text, font=(FONT, fs(16)), command=right_cmd,
+            tk.Button(bar, text=right_text, font=(FONT, ifs()), command=right_cmd,
                       bg=self.t["bg"], fg=self.t["fg"], activebackground=self.t["card"],
                       relief="flat", bd=0, padx=8).pack(side="right")
         return bar
@@ -448,16 +472,16 @@ class FlashLite(tk.Tk):
     def _build_home(self, root):
         self.topbar(root, left_text="⚙", left_cmd=lambda: self.show("settings"),
                     right_text="+", right_cmd=self._new_deck)
-        self.L(root, "FlashLite", size=fs(24), bold=True).pack(pady=(6, 2))
-        self.L(root, "pick a deck to study", size=fs(11), fg=self.t["muted"]).pack(pady=(0, 10))
+        self.L(root, "FlashLite", size=hfs(2), bold=True).pack(pady=(6, 2))
+        self.L(root, "pick a deck to study", size=hfs(1), fg=self.t["muted"]).pack(pady=(0, 10))
 
         self.home_decks = tk.Frame(root, bg=self.t["bg"])
         self.home_decks.pack(fill="both", expand=True, padx=40)
 
         bottom = tk.Frame(root, bg=self.t["bg"])
         bottom.pack(pady=14)
-        self.B(bottom, "Import .txt …", self._import_txt).pack(side="left", padx=6)
-        self.L(root, f"v{VERSION}", size=fs(9), fg=self.t["muted"]).pack(pady=(0, 8))
+        self.B(bottom, "Import .txt …", self._import_txt, size=hfs(1)).pack(side="left", padx=6)
+        self.L(root, f"v{VERSION}", size=hfs(0.75), fg=self.t["muted"]).pack(pady=(0, 8))
 
     def _refresh_home(self):
         for child in self.home_decks.winfo_children():
@@ -465,13 +489,13 @@ class FlashLite(tk.Tk):
         decks = self.data["decks"]
         if not decks:
             self.L(self.home_decks, "no decks yet — make one with +",
-                   size=fs(12), fg=self.t["muted"]).pack(pady=30)
+                   size=hfs(1), fg=self.t["muted"]).pack(pady=30)
             return
         for i, deck in enumerate(decks):
             row = tk.Frame(self.home_decks, bg=self.t["bg"])
             row.pack(fill="x", pady=3)
             b = tk.Button(row, text=f"{deck['name']}   ({len(deck['cards'])})",
-                          font=(FONT, fs(14)), bg=self.t["card"], fg=self.t["fg"],
+                          font=(FONT, hfs(1)), bg=self.t["card"], fg=self.t["fg"],
                           activebackground=self.t["accent"], activeforeground=self.t["bg"],
                           relief="solid", bd=1, padx=12, pady=8, anchor="w",
                           command=lambda i=i: self._open_deck(i))
@@ -487,12 +511,12 @@ class FlashLite(tk.Tk):
     def _build_deck(self, root):
         self.topbar(root, left_text="‹", left_cmd=lambda: self.show("home"),
                     right_text="⚙", right_cmd=lambda: self.show("settings"))
-        self.deck_title = self.L(root, "", size=fs(22), bold=True)
+        self.deck_title = self.L(root, "", size=ufs(2), bold=True)
         self.deck_title.pack(pady=(2, 2))
-        self.deck_sub = self.L(root, "", size=fs(11), fg=self.t["muted"])
+        self.deck_sub = self.L(root, "", size=ufs(1), fg=self.t["muted"])
         self.deck_sub.pack(pady=(0, 8))
 
-        self.card_list = tk.Listbox(root, font=(FONT, fs(12)), bg=self.t["card"],
+        self.card_list = tk.Listbox(root, font=(FONT, ufs(1.2)), bg=self.t["card"],
                                     fg=self.t["fg"], selectbackground=self.t["accent"],
                                     selectforeground=self.t["bg"], relief="solid", bd=1,
                                     exportselection=False)
@@ -535,7 +559,7 @@ class FlashLite(tk.Tk):
                        lambda key=key: self._start_study(key)).pack(side="left", padx=4)
         if not any_mode:
             hint = "enable a study mode in ⚙ settings" if n > 0 else "add cards to study"
-            self.L(self.study_row, hint, size=fs(11), fg=self.t["muted"]).pack()
+            self.L(self.study_row, hint, size=ufs(1), fg=self.t["muted"]).pack()
 
     # ======================================================================= #
     # STUDY — Flashbang-style flow
@@ -543,7 +567,7 @@ class FlashLite(tk.Tk):
     def _build_study(self, root):
         self.topbar(root, left_text="‹", left_cmd=self._quit_study,
                     right_text="⚙", right_cmd=lambda: self.show("settings"))
-        self.study_title = self.L(root, "", size=fs(22), bold=True)
+        self.study_title = self.L(root, "", size=sfs(1), bold=True)
         self.study_title.pack(pady=(2, 12))
 
         mid = tk.Frame(root, bg=self.t["bg"])
@@ -552,25 +576,25 @@ class FlashLite(tk.Tk):
         center = tk.Frame(mid, bg=self.t["bg"])
         center.place(relx=0.5, rely=0.5, anchor="center", relwidth=1.0)
 
-        self.prompt_lbl = tk.Label(center, text="", font=(FONT, fs(18)), wraplength=wl(560),
+        self.prompt_lbl = tk.Label(center, text="", font=(FONT, sfs(1)), wraplength=wl(560),
                                    bg=self.t["bg"], fg=self.t["fg"], justify="center")
         self.prompt_lbl.pack(pady=(10, 10))
         tk.Frame(center, height=2, bg=self.t["fg"]).pack(fill="x", padx=60, pady=4)
-        self.answer_lbl = tk.Label(center, text="", font=(FONT, fs(18)), wraplength=wl(560),
+        self.answer_lbl = tk.Label(center, text="", font=(FONT, sfs(1)), wraplength=wl(560),
                                    bg=self.t["bg"], fg=self.t["fg"], justify="center")
         self.answer_lbl.pack(pady=(10, 4))
 
         # typed-mode widgets (hidden unless typed mode)
-        self.type_entry = tk.Entry(center, font=(FONT, fs(14)), width=34, justify="center",
+        self.type_entry = tk.Entry(center, font=(FONT, sfs(1)), width=34, justify="center",
                                    bg=self.t["card"], fg=self.t["fg"],
                                    insertbackground=self.t["fg"], relief="solid", bd=1)
-        self.type_check_btn = self.B(center, "Check", self._typed_check)
+        self.type_check_btn = self.B(center, "Check", self._typed_check, bold=True)
 
         # test-mode widgets (hidden unless test mode)
         self.opt_frame = tk.Frame(center, bg=self.t["bg"])
         self.opt_buttons = []
         for i in range(4):
-            b = tk.Button(self.opt_frame, text="", font=(FONT, fs(13)), wraplength=wl(480),
+            b = tk.Button(self.opt_frame, text="", font=(FONT, sfs(0.8)), wraplength=wl(480),
                           bg=self.t["card"], fg=self.t["fg"],
                           activebackground=self.t["accent"], relief="solid", bd=1,
                           padx=10, pady=6, anchor="w",
@@ -578,24 +602,24 @@ class FlashLite(tk.Tk):
             b.pack(fill="x", pady=3)
             self.opt_buttons.append(b)
 
-        self.study_feedback = self.L(center, "", size=fs(13), bold=True)
+        self.study_feedback = self.L(center, "", size=sfs(1), bold=True)
         self.study_feedback.pack(pady=6)
 
         bot = tk.Frame(root, bg=self.t["bg"])
         bot.pack(pady=(4, 6))
-        self.remaining_lbl = self.L(bot, "", size=fs(12))
+        self.remaining_lbl = self.L(bot, "", size=_pt(13))
         self.remaining_lbl.pack()
-        self.hint1 = self.L(bot, "", size=fs(11), fg=self.t["muted"])
+        self.hint1 = self.L(bot, "", size=_pt(13), fg=self.t["muted"])
         self.hint1.pack()
-        self.hint2 = self.L(bot, "", size=fs(11), fg=self.t["muted"])
+        self.hint2 = self.L(bot, "", size=_pt(13), fg=self.t["muted"])
         self.hint2.pack()
 
         editbar = tk.Frame(root, bg=self.t["bg"])
         editbar.pack(fill="x", padx=12, pady=(0, 10))
-        tk.Button(editbar, text="✎", font=(FONT, fs(14)), command=self._edit_current_card,
+        tk.Button(editbar, text="✎", font=(FONT, ifs()), command=self._edit_current_card,
                   bg=self.t["bg"], fg=self.t["fg"], activebackground=self.t["card"],
                   relief="flat", bd=0).pack(side="left")
-        tk.Button(editbar, text="🔊", font=(FONT, fs(14)), command=self._speak_current,
+        tk.Button(editbar, text="🔊", font=(FONT, ifs()), command=self._speak_current,
                   bg=self.t["bg"], fg=self.t["fg"], activebackground=self.t["card"],
                   relief="flat", bd=0).pack(side="left", padx=6)
 
@@ -826,7 +850,7 @@ class FlashLite(tk.Tk):
         def heading(text):
             f = tk.Frame(inner, bg=self.t["bg"])
             f.pack(fill="x", pady=(12, 6), padx=10)
-            self.L(f, text, size=fs(16), bold=True).pack(side="left")
+            self.L(f, text, size=ufs(1), bold=True).pack(side="left")
             tk.Frame(f, height=2, bg=self.t["fg"]).pack(side="left", fill="x",
                                                        expand=True, padx=(10, 0))
 
@@ -845,7 +869,7 @@ class FlashLite(tk.Tk):
             if tid == self.settings["theme"]:
                 cv.create_oval(1, 1, 55, 55, outline=th["fg"], width=3)
             cv.bind("<Button-1>", lambda e, tid=tid: self._pick_theme(tid))
-            self.L(cell, th["name"], size=fs(10)).pack()
+            self.L(cell, th["name"], size=ufs(1)).pack()
             cell.bind("<Button-1>", lambda e, tid=tid: self._pick_theme(tid))
 
         heading("Study")
@@ -856,39 +880,52 @@ class FlashLite(tk.Tk):
         for key, label in (("flashcard", "Flashcard"), ("typed", "Typed"), ("test", "Test")):
             var = tk.BooleanVar(value=s["modes"].get(key, False))
             self.mode_vars[key] = var
-            tk.Checkbutton(opts, text=label, variable=var, font=(FONT, fs(12)),
+            tk.Checkbutton(opts, text=label, variable=var, font=(FONT, ufs(1.2)),
                            bg=self.t["bg"], fg=self.t["fg"], selectcolor=self.t["card"],
                            activebackground=self.t["bg"], activeforeground=self.t["fg"],
                            command=self._save_study_opts).pack(anchor="w", pady=2)
-        self.L(opts, "Direction:", size=fs(12), bold=True).pack(anchor="w", pady=(10, 2))
+        self.L(opts, "Direction:", size=ufs(1), bold=True).pack(anchor="w", pady=(10, 2))
         self.dir_var = tk.StringVar(value=s["direction"])
         for key, label in (("standard", "Standard (front → back)"),
                            ("reversed", "Reversed (back → front)"),
                            ("both", "Both")):
             tk.Radiobutton(opts, text=label, value=key, variable=self.dir_var,
-                           font=(FONT, fs(12)), bg=self.t["bg"], fg=self.t["fg"],
+                           font=(FONT, ufs(1.2)), bg=self.t["bg"], fg=self.t["fg"],
                            selectcolor=self.t["card"], activebackground=self.t["bg"],
                            activeforeground=self.t["fg"],
                            command=self._save_study_opts).pack(anchor="w", pady=2)
-        self.L(opts, "Text size:", size=fs(12), bold=True).pack(anchor="w", pady=(10, 2))
-        self.fontsize_var = tk.StringVar(value=str(s.get("font_scale", 1.0)))
-        for label, val in FONT_SIZE_CHOICES:
-            tk.Radiobutton(opts, text=label, value=str(val),
-                           variable=self.fontsize_var, font=(FONT, fs(12)),
-                           bg=self.t["bg"], fg=self.t["fg"],
-                           selectcolor=self.t["card"], activebackground=self.t["bg"],
-                           activeforeground=self.t["fg"],
-                           command=self._apply_fontsize).pack(anchor="w", pady=2)
-        self.L(opts, "Speech:", size=fs(12), bold=True).pack(anchor="w", pady=(10, 2))
+        # FlashBang's own control: a numeric "Font size" box (default 18,
+        # clamped 12-35), plus FlashLite's Auto follow-window option.
+        self.L(opts, "Font size:", size=ufs(1), bold=True).pack(anchor="w", pady=(10, 2))
+        frow = tk.Frame(opts, bg=self.t["bg"])
+        frow.pack(anchor="w")
+        self.fontsize_var = tk.StringVar(
+            value=_fmt_size(s.get("study_font_size", 18.0)))
+        fentry = tk.Entry(frow, textvariable=self.fontsize_var, width=6,
+                          font=(FONT, ufs(1)), bg=self.t["card"], fg=self.t["fg"],
+                          insertbackground=self.t["fg"], relief="solid", bd=1,
+                          justify="center")
+        fentry.pack(side="left")
+        fentry.bind("<Return>", self._apply_fontsize)
+        fentry.bind("<FocusOut>", self._apply_fontsize)
+        self.L(frow, "(12-35)", size=ufs(1),
+               fg=self.t["muted"]).pack(side="left", padx=8)
+        self.auto_var = tk.BooleanVar(value=bool(s.get("auto_font", False)))
+        tk.Checkbutton(frow, text="Auto (follow window)", variable=self.auto_var,
+                       font=(FONT, ufs(1.2)), bg=self.t["bg"], fg=self.t["fg"],
+                       selectcolor=self.t["card"], activebackground=self.t["bg"],
+                       activeforeground=self.t["fg"],
+                       command=self._apply_auto_toggle).pack(side="left", padx=(12, 0))
+        self.L(opts, "Speech:", size=ufs(1), bold=True).pack(anchor="w", pady=(10, 2))
         self.say_prompt_var = tk.BooleanVar(value=s["say_prompt"])
         self.say_answer_var = tk.BooleanVar(value=s["say_answer"])
         tk.Checkbutton(opts, text="Say Prompt", variable=self.say_prompt_var,
-                       font=(FONT, fs(12)), bg=self.t["bg"], fg=self.t["fg"],
+                       font=(FONT, ufs(1.2)), bg=self.t["bg"], fg=self.t["fg"],
                        selectcolor=self.t["card"], activebackground=self.t["bg"],
                        activeforeground=self.t["fg"],
                        command=self._save_study_opts).pack(anchor="w", pady=2)
         tk.Checkbutton(opts, text="Say Answer", variable=self.say_answer_var,
-                       font=(FONT, fs(12)), bg=self.t["bg"], fg=self.t["fg"],
+                       font=(FONT, ufs(1.2)), bg=self.t["bg"], fg=self.t["fg"],
                        selectcolor=self.t["card"], activebackground=self.t["bg"],
                        activeforeground=self.t["fg"],
                        command=self._save_study_opts).pack(anchor="w", pady=2)
@@ -896,7 +933,7 @@ class FlashLite(tk.Tk):
         heading("About")
         about = tk.Frame(inner, bg=self.t["bg"])
         about.pack(fill="x", padx=10, pady=(0, 20))
-        self.L(about, f"FlashLite v{VERSION}", size=fs(11), fg=self.t["muted"]).pack(anchor="w")
+        self.L(about, f"FlashLite v{VERSION}", size=ufs(1), fg=self.t["muted"]).pack(anchor="w")
         self.B(about, "Check for updates",
                lambda: webbrowser.open(RELEASES_URL)).pack(anchor="w", pady=6)
 
@@ -914,24 +951,39 @@ class FlashLite(tk.Tk):
         self._save()
         self._restyle()
 
-    def _apply_fontsize(self):
-        val = self.fontsize_var.get()
-        if val == "auto":
-            self.settings["font_scale"] = "auto"
-        else:
-            self._stop_auto_scale()
-            self.settings["font_scale"] = float(val)
-            _FONT_SCALE["v"] = self.settings["font_scale"]
+    def _apply_fontsize(self, event=None):
+        # FlashBang's own rule: numeric, falls back to 18, clamped to 12-35.
+        try:
+            v = float(self.fontsize_var.get().strip())
+        except Exception:
+            v = 18.0
+        v = min(35.0, max(12.0, v))
+        self.fontsize_var.set(_fmt_size(v))
+        if v == float(self.settings.get("study_font_size", 18.0)):
+            return  # unchanged (e.g. focus-out); skip the rebuild
+        self.settings["study_font_size"] = v
         self._save()
-        self._restyle()
-        if val == "auto":
-            self.after(200, self._apply_auto_scale)
+        if self.settings.get("auto_font"):
+            self._apply_auto_scale()
+        else:
+            _STUDY_PX["v"] = v
+            self._restyle()
+
+    def _apply_auto_toggle(self):
+        on = bool(self.auto_var.get())
+        self.settings["auto_font"] = on
+        self._save()
+        if on:
+            self._apply_auto_scale()
+        else:
+            _STUDY_PX["v"] = float(self.settings.get("study_font_size", 18.0))
+            self._restyle()
 
     # -- Auto text size: text follows the window ---------------------------- #
     def _on_window_configure(self, event):
         if event.widget is not self:
             return
-        if self.settings.get("font_scale") != "auto":
+        if not self.settings.get("auto_font"):
             return
         # Debounce: rescale once she stops dragging, not 60x a second.
         self._stop_auto_scale()
@@ -947,16 +999,17 @@ class FlashLite(tk.Tk):
 
     def _apply_auto_scale(self):
         self._auto_after = None
-        if self.settings.get("font_scale") != "auto":
+        if not self.settings.get("auto_font"):
             return
         w, h = self.winfo_width(), self.winfo_height()
         if w < 10 or h < 10:
             return
         s = min(w / _REF_W, h / _REF_H)
         s = max(0.85, min(3.0, s))
-        if abs(s - _FONT_SCALE["v"]) < 0.02:
+        new_px = float(self.settings.get("study_font_size", 18.0)) * s
+        if abs(new_px - _STUDY_PX["v"]) < 0.25:
             return  # no visible change; skip the rebuild
-        _FONT_SCALE["v"] = s
+        _STUDY_PX["v"] = new_px
         # Rebuild at the new size, keeping an in-progress study session alive.
         studying = self.screen == "study" and getattr(self, "queue", None)
         was_flipped = bool(studying and self.flipped)
